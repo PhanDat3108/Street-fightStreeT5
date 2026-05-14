@@ -441,8 +441,8 @@ def controls_screen():
         draw_text("GAME INFO:", controls_font, WHITE, 750, 150)
         draw_text("• P1 is WARRIOR (left)", small_font, YELLOW, 750, 190)
         draw_text("• P2 is WIZARD (right)", small_font, (255, 100, 0), 750, 220)
-        draw_text("• Normal attack = 10 dmg", small_font, WHITE, 750, 250)
-        draw_text("• Combo attack = 15x2 dmg", small_font, WHITE, 750, 280)
+        draw_text("• Normal attack = 10 dmg (+5 Mana)", small_font, WHITE, 750, 250)
+        draw_text("• Combo attack = 15x2 dmg (20 Mana)", small_font, WHITE, 750, 280)
         
         # Tips
         draw_text("TIPS:", controls_font, WHITE, 800, 330)
@@ -473,6 +473,7 @@ def reset_game(ai_enabled):
 
 
 MAX_HEALTH = 250
+MAX_MANA = 20
 
 def draw_health_bar(health, x, y):
     bar_width = 400
@@ -481,6 +482,15 @@ def draw_health_bar(health, x, y):
     if health > 0:
         ratio = health / MAX_HEALTH
         pygame.draw.rect(screen, RED, (x, y, bar_width * ratio, bar_height))
+    pygame.draw.rect(screen, WHITE, (x, y, bar_width, bar_height), 2)
+
+def draw_mana_bar(mana, x, y):
+    bar_width = 400
+    bar_height = 15
+    pygame.draw.rect(screen, BLACK, (x, y, bar_width, bar_height))
+    if mana > 0:
+        ratio = mana / MAX_MANA
+        pygame.draw.rect(screen, BLUE, (x, y, bar_width * ratio, bar_height))
     pygame.draw.rect(screen, WHITE, (x, y, bar_width, bar_height), 2)
 
 
@@ -519,11 +529,14 @@ def game_loop(ai_enabled):
         
         # Add player identification labels
         player_label_font = pygame.font.Font(resource_path("assets/fonts/turok.ttf"), 25)
-        draw_text("PLAYER 1", player_label_font, BLUE, 20, 95)
-        draw_text("PLAYER 2", player_label_font, (255, 100, 0), SCREEN_WIDTH - 420, 95)
+        draw_text("PLAYER 1", player_label_font, BLUE, 20, 110)
+        draw_text("PLAYER 2", player_label_font, (255, 100, 0), SCREEN_WIDTH - 420, 110)
         
         draw_health_bar(fighter_1.health, 20, 50)
+        draw_mana_bar(fighter_1.mana, 20, 85)
+        
         draw_health_bar(fighter_2.health, SCREEN_WIDTH - 420, 50)
+        draw_mana_bar(fighter_2.mana, SCREEN_WIDTH - 420, 85)
 
         exit_button = draw_button("MAIN MENU", menu_font, BLACK, YELLOW, SCREEN_WIDTH // 2 - 150, 20, 300, 50)
 

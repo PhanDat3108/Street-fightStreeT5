@@ -26,6 +26,8 @@ class Fighter:
         self.last_damage_taken = 0
         self.max_health = 250
         self.health = 250
+        self.max_mana = 20
+        self.mana = 0
         self.alive = True
         # AI attributes for computer player
         self.ai_enabled = False  # Changed to False for 2-player mode
@@ -101,8 +103,8 @@ class Fighter:
                 if target.jump:
                     attack_type = 2
                 elif distance < 90:
-                    # 40% chance to use combo when close!
-                    if random.random() < 0.4:
+                    # 40% chance to use combo when close and have enough mana!
+                    if random.random() < 0.4 and self.mana >= self.max_mana:
                         attack_type = 3
                     else:
                         attack_type = 1
@@ -141,15 +143,16 @@ class Fighter:
                     self.vel_y = -30
                     self.jump = True
                 # attack
-                if key[pygame.K_r] or key[pygame.K_t] or key[pygame.K_y]:
+                if (key[pygame.K_r] or key[pygame.K_t] or key[pygame.K_y]) and self.attack_cooldown == 0:
                     if key[pygame.K_r]:
                         self.attack_type = 1
                         self.attack(target, 10)
                     elif key[pygame.K_t]:
                         self.attack_type = 2
                         self.attack(target, 10)
-                    elif key[pygame.K_y]:
+                    elif key[pygame.K_y] and self.mana >= self.max_mana:
                         self.attack_type = 3
+                        self.mana -= self.max_mana
                         self.attack(target, 15)
 
             # check player 2 controls
@@ -169,14 +172,21 @@ class Fighter:
                         self.jump = True
                     
                     # Apply AI attack
-                    if attack_type > 0:
+                    if attack_type > 0 and self.attack_cooldown == 0:
+                        self.attack_type = attack_type
                         if attack_type == 1:
                             self.attack(target, 10)
                         elif attack_type == 2:
                             self.attack(target, 10)
                         elif attack_type == 3:
-                            self.attack(target, 15)
-                        self.attack_type = attack_type
+                            # Only execute combo if mana is sufficient
+                            if self.mana >= self.max_mana:
+                                self.mana -= self.max_mana
+                                self.attack(target, 15)
+                            else:
+                                # Fallback if AI somehow chose 3 without mana
+                                self.attack_type = 1
+                                self.attack(target, 10)
                 else:
                     # Player 2 human controls
                     if key[pygame.K_LEFT]:
@@ -190,15 +200,16 @@ class Fighter:
                         self.vel_y = -30
                         self.jump = True
                     # attack
-                    if key[pygame.K_b] or key[pygame.K_n] or key[pygame.K_m]:
+                    if (key[pygame.K_b] or key[pygame.K_n] or key[pygame.K_m]) and self.attack_cooldown == 0:
                         if key[pygame.K_b]:
                             self.attack_type = 1
                             self.attack(target, 10)
                         elif key[pygame.K_n]:
                             self.attack_type = 2
                             self.attack(target, 10)
-                        elif key[pygame.K_m]:
+                        elif key[pygame.K_m] and self.mana >= self.max_mana:
                             self.attack_type = 3
+                            self.mana -= self.max_mana
                             self.attack(target, 15)
 
         # apply gravity
@@ -309,6 +320,12 @@ class Fighter:
                 target.hit = True
                 target.just_hit = True
                 target.last_damage_taken = damage
+                
+                # Add mana on successful hit for normal attacks
+                if self.attack_type in [1, 2]:
+                    self.mana += 5
+                    if self.mana > self.max_mana:
+                        self.mana = self.max_mana
 
     def update_action(self, new_action):
         # check if the new action is different to the previous one
