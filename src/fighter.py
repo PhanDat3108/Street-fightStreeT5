@@ -22,10 +22,12 @@ class Fighter:
         self.attack_cooldown = 0
         self.attack_sound = sound
         self.hit = False
-        self.health = 100
+        self.just_hit = False
+        self.max_health = 250
+        self.health = 250
         self.alive = True
         # AI attributes for computer player
-        self.ai_enabled = (player == 2)  # Player 2 is AI-controlled
+        self.ai_enabled = False  # Changed to False for 2-player mode
         self.ai_reaction_time = 0
         self.ai_decision_cooldown = 0
         self.ai_aggression = 0.85  # Increased aggression (0-1 scale, higher = more aggressive)
@@ -152,8 +154,8 @@ class Fighter:
         # get keypresses for human player
         key = pygame.key.get_pressed()
 
-        # can only perform other actions if not currently attacking
-        if self.attacking == False and self.alive == True and round_over == False:
+        # can only perform other actions if not currently attacking and not being hit
+        if self.attacking == False and self.hit == False and self.alive == True and round_over == False:
             # check player 1 controls (human player)
             if self.player == 1:
                 # movement
@@ -176,25 +178,45 @@ class Fighter:
                     if key[pygame.K_t]:
                         self.attack_type = 2
 
-            # check player 2 controls (AI player)
-            elif self.player == 2 and self.ai_enabled:
-                # Get AI decisions
-                ai_dx, ai_dy, should_jump, attack_type = self.ai_make_decision(target, screen_width, screen_height)
-                
-                # Apply AI movement
-                if ai_dx != 0:
-                    dx = ai_dx
-                    self.running = True
-                
-                # Apply AI jump
-                if should_jump and self.jump == False:
-                    self.vel_y = -30
-                    self.jump = True
-                
-                # Apply AI attack
-                if attack_type > 0:
-                    self.attack(target)
-                    self.attack_type = attack_type
+            # check player 2 controls
+            elif self.player == 2:
+                if self.ai_enabled:
+                    # Get AI decisions
+                    ai_dx, ai_dy, should_jump, attack_type = self.ai_make_decision(target, screen_width, screen_height)
+                    
+                    # Apply AI movement
+                    if ai_dx != 0:
+                        dx = ai_dx
+                        self.running = True
+                    
+                    # Apply AI jump
+                    if should_jump and self.jump == False:
+                        self.vel_y = -30
+                        self.jump = True
+                    
+                    # Apply AI attack
+                    if attack_type > 0:
+                        self.attack(target)
+                        self.attack_type = attack_type
+                else:
+                    # Player 2 human controls
+                    if key[pygame.K_LEFT]:
+                        dx = -SPEED
+                        self.running = True
+                    if key[pygame.K_RIGHT]:
+                        dx = SPEED
+                        self.running = True
+                    # jump
+                    if key[pygame.K_UP] and self.jump == False:
+                        self.vel_y = -30
+                        self.jump = True
+                    # attack
+                    if key[pygame.K_n] or key[pygame.K_m]:
+                        self.attack(target)
+                        if key[pygame.K_n]:
+                            self.attack_type = 1
+                        if key[pygame.K_m]:
+                            self.attack_type = 2
 
         # apply gravity
         self.vel_y += GRAVITY
@@ -280,6 +302,7 @@ class Fighter:
             if attacking_rect.colliderect(target.rect):
                 target.health -= 10
                 target.hit = True
+                target.just_hit = True
 
     def update_action(self, new_action):
         # check if the new action is different to the previous one
@@ -290,5 +313,15 @@ class Fighter:
             self.update_time = pygame.time.get_ticks()
 
     def draw(self, surface):
-        img = pygame.transform.flip(self.image, self.flip, False)
+        img = pygame.transform.flip(self.image, self.flip, False).copy()
+        
+        # Thêm hiệu ứng chớp đỏ khi nhận sát thương
+        if self.hit:
+            try:
+                mask = pygame.mask.from_surface(img)
+                mask_surf = mask.to_surface(setcolor=(255, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
+                img.blit(mask_surf, (0, 0))
+            except Exception:
+                pass
+
         surface.blit(img, (self.rect.x - (self.offset[0] * self.image_scale), self.rect.y - (self.offset[1] * self.image_scale)))

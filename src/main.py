@@ -45,7 +45,10 @@ pygame.display.set_caption("Street Fighter")
 clock = pygame.time.Clock()
 
 # Load Assets
-bg_image = cv2.imread(resource_path("assets/images/bg1.jpg"))
+MAP_FILES = ["assets/images/bg.jpg", "assets/images/bg1.jpg", "assets/images/bg2.jpg"]
+loaded_maps = [cv2.imread(resource_path(m)) for m in MAP_FILES]
+current_map_index = 1
+bg_image = loaded_maps[current_map_index]
 victory_img = pygame.image.load(resource_path("assets/images/victory.png")).convert_alpha()
 warrior_victory_img = pygame.image.load(resource_path("assets/images/warrior.png")).convert_alpha()
 wizard_victory_img = pygame.image.load(resource_path("assets/images/wizard.png")).convert_alpha()
@@ -86,6 +89,23 @@ WIZARD_DATA = [WIZARD_SIZE, WIZARD_SCALE, WIZARD_OFFSET]
 # Game Variables
 score = [0, 0]  # Player Scores: [P1, P2]
 
+class DamageText:
+    def __init__(self, x, y, damage, color):
+        self.x = x
+        self.y = y
+        self.damage = str(damage)
+        self.color = color
+        self.counter = 0
+
+    def update(self):
+        self.y -= 3  # Float up
+        self.counter += 1
+        return self.counter <= 40
+
+    def draw(self):
+        draw_text(f"-{self.damage}", score_font, self.color, self.x, self.y)
+
+damage_text_group = []
 
 def draw_text(text, font, color, x, y):
     img = font.render(text, True, color)
@@ -119,16 +139,24 @@ def draw_button(text, font, text_col, button_col, x, y, width, height):
     return pygame.Rect(x, y, width, height)
 
 
-def victory_screen(winner_img):
-    start_time = pygame.time.get_ticks()
-    while pygame.time.get_ticks() - start_time < ROUND_OVER_COOLDOWN:
-
+def victory_screen(winner_img, winner_text):
+    while True:
+        draw_bg(bg_image)
+        
+        # Draw victory logo
         resized_victory_img = pygame.transform.scale(victory_img, (victory_img.get_width() * 2, victory_img.get_height() * 2))
         screen.blit(resized_victory_img, (SCREEN_WIDTH // 2 - resized_victory_img.get_width() // 2,
-                                          SCREEN_HEIGHT // 2 - resized_victory_img.get_height() // 2 - 50))
+                                          SCREEN_HEIGHT // 4 - 50))
 
-        screen.blit(winner_img, (SCREEN_WIDTH // 2 - winner_img.get_width() // 2,
-                                 SCREEN_HEIGHT // 2 - winner_img.get_height() // 2 + 100))
+        # Draw winner text
+        win_text = f"{winner_text} WINS!"
+        draw_text(win_text, menu_font_title, YELLOW, SCREEN_WIDTH // 2 - menu_font_title.size(win_text)[0] // 2, SCREEN_HEIGHT // 2 - 50)
+
+        # Draw buttons
+        button_width = 300
+        button_height = 60
+        play_again_btn = draw_button("PLAY AGAIN", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - button_width // 2, SCREEN_HEIGHT - 200, button_width, button_height)
+        main_menu_btn = draw_button("MAIN MENU", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - button_width // 2, SCREEN_HEIGHT - 120, button_width, button_height)
 
         pygame.display.update()
 
@@ -136,6 +164,13 @@ def victory_screen(winner_img):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_again_btn.collidepoint(event.pos):
+                    return "PLAY_AGAIN"
+                if main_menu_btn.collidepoint(event.pos):
+                    return "MAIN_MENU"
+        
+        clock.tick(FPS)
 
 
 def draw_gradient_text(text, font, x, y, colors):
@@ -205,6 +240,58 @@ def main_menu():
         clock.tick(FPS)
 
 
+def map_selection_screen():
+    global current_map_index, bg_image
+    
+    while True:
+        # Show the actual map clearly
+        draw_bg(loaded_maps[current_map_index], is_game_started=True)
+        
+        # Draw semi-transparent overlay for better UI readability
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        screen.blit(overlay, (0, 0))
+        
+        title_text = "CHOOSE YOUR ARENA"
+        draw_text(title_text, menu_font_title, YELLOW, SCREEN_WIDTH // 2 - menu_font_title.size(title_text)[0] // 2, 50)
+        
+        button_width = 300
+        button_height = 60
+        spacing = 30
+        
+        start_y = 200
+        
+        dojo_btn = draw_button("MAP 1: DOJO", menu_font, BLACK, GREEN if current_map_index == 0 else WHITE, SCREEN_WIDTH // 2 - button_width // 2, start_y, button_width, button_height)
+        forest_btn = draw_button("MAP 2: FOREST", menu_font, BLACK, GREEN if current_map_index == 1 else WHITE, SCREEN_WIDTH // 2 - button_width // 2, start_y + button_height + spacing, button_width, button_height)
+        city_btn = draw_button("MAP 3: CITY", menu_font, BLACK, GREEN if current_map_index == 2 else WHITE, SCREEN_WIDTH // 2 - button_width // 2, start_y + (button_height + spacing) * 2, button_width, button_height)
+        
+        fight_btn = draw_button("FIGHT!", count_font, BLACK, RED, SCREEN_WIDTH // 2 - button_width // 2, start_y + (button_height + spacing) * 3 + 50, button_width, 100)
+        back_btn = draw_button("BACK TO MENU", menu_font, BLACK, WHITE, SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT - 100, 400, 50)
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if dojo_btn.collidepoint(event.pos):
+                    current_map_index = 0
+                    bg_image = loaded_maps[0]
+                if forest_btn.collidepoint(event.pos):
+                    current_map_index = 1
+                    bg_image = loaded_maps[1]
+                if city_btn.collidepoint(event.pos):
+                    current_map_index = 2
+                    bg_image = loaded_maps[2]
+                if fight_btn.collidepoint(event.pos):
+                    return "START"
+                if back_btn.collidepoint(event.pos):
+                    return "BACK"
+        
+        clock.tick(FPS)
+
+
 def scores_screen():
     while True:
         draw_bg(bg_image)
@@ -254,29 +341,39 @@ def controls_screen():
         small_font = pygame.font.Font(resource_path("assets/fonts/turok.ttf"), 25)
         
         # Movement controls
-        draw_text("MOVEMENT:", controls_font, WHITE, 100, 150)
+        draw_text("P1 MOVEMENT:", controls_font, WHITE, 100, 150)
         draw_text("A - Move Left", small_font, BLUE, 100, 190)
         draw_text("D - Move Right", small_font, BLUE, 100, 220)
         draw_text("W - Jump", small_font, BLUE, 100, 250)
         
         # Attack controls
-        draw_text("ATTACKS:", controls_font, WHITE, 100, 300)
+        draw_text("P1 ATTACKS:", controls_font, WHITE, 100, 300)
         draw_text("R - Close Range Attack", small_font, RED, 100, 340)
         draw_text("T - Long Range Attack", small_font, RED, 100, 370)
         
+        # P2 Movement controls
+        draw_text("P2 MOVEMENT:", controls_font, WHITE, 450, 150)
+        draw_text("Left Arrow - Move Left", small_font, (255, 100, 0), 450, 190)
+        draw_text("Right Arrow - Move Right", small_font, (255, 100, 0), 450, 220)
+        draw_text("Up Arrow - Jump", small_font, (255, 100, 0), 450, 250)
+        
+        # P2 Attack controls
+        draw_text("P2 ATTACKS:", controls_font, WHITE, 450, 300)
+        draw_text("N - Close Range Attack", small_font, RED, 450, 340)
+        draw_text("M - Long Range Attack", small_font, RED, 450, 370)
+        
         # Game info
-        draw_text("GAME INFO:", controls_font, WHITE, 500, 150)
-        draw_text("• You play as the WARRIOR (left)", small_font, YELLOW, 500, 190)
-        draw_text("• Computer plays as WIZARD (right)", small_font, (255, 100, 0), 500, 220)
-        draw_text("• Each attack deals 10 damage", small_font, WHITE, 500, 250)
-        draw_text("• First to lose all health loses", small_font, WHITE, 500, 280)
+        draw_text("GAME INFO:", controls_font, WHITE, 800, 150)
+        draw_text("• P1 is WARRIOR (left)", small_font, YELLOW, 800, 190)
+        draw_text("• P2 is WIZARD (right)", small_font, (255, 100, 0), 800, 220)
+        draw_text("• Each attack deals 10 dmg", small_font, WHITE, 800, 250)
+        draw_text("• 0 health = lose", small_font, WHITE, 800, 280)
         
         # Tips
-        draw_text("TIPS:", controls_font, WHITE, 500, 330)
-        draw_text("• Jump to avoid attacks", small_font, GREEN, 500, 370)
-        draw_text("• Use close attacks when near", small_font, GREEN, 500, 400)
-        draw_text("• Use long attacks at distance", small_font, GREEN, 500, 430)
-        draw_text("• Watch for AI patterns!", small_font, GREEN, 500, 460)
+        draw_text("TIPS:", controls_font, WHITE, 800, 330)
+        draw_text("• Jump to avoid attacks", small_font, GREEN, 800, 370)
+        draw_text("• Use close attacks near", small_font, GREEN, 800, 400)
+        draw_text("• Use long attacks far", small_font, GREEN, 800, 430)
         
         # Return button
         return_button = draw_button("RETURN TO MAIN MENU", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - 220, 550, 500, 50)
@@ -299,11 +396,16 @@ def reset_game():
     fighter_2 = Fighter(2, 700, 310, True, WIZARD_DATA, wizard_sheet, WIZARD_ANIMATION_STEPS, magic_fx)
 
 
+MAX_HEALTH = 250
+
 def draw_health_bar(health, x, y):
-    pygame.draw.rect(screen, BLACK, (x, y, 200, 20))
+    bar_width = 400
+    bar_height = 30
+    pygame.draw.rect(screen, BLACK, (x, y, bar_width, bar_height))
     if health > 0:
-        pygame.draw.rect(screen, RED, (x, y, health * 2, 20))
-    pygame.draw.rect(screen, WHITE, (x, y, 200, 20), 2)
+        ratio = health / MAX_HEALTH
+        pygame.draw.rect(screen, RED, (x, y, bar_width * ratio, bar_height))
+    pygame.draw.rect(screen, WHITE, (x, y, bar_width, bar_height), 2)
 
 
 def countdown():
@@ -328,6 +430,7 @@ def game_loop():
     reset_game()
     round_over = False
     winner_img = None
+    winner_text = ""
     game_started = True
 
     countdown()
@@ -336,15 +439,15 @@ def game_loop():
         draw_bg(bg_image, is_game_started=game_started)
 
         draw_text(f"P1: {score[0]}", score_font, RED, 20, 20)
-        draw_text(f"P2: {score[1]}", score_font, RED, SCREEN_WIDTH - 220, 20)
+        draw_text(f"P2: {score[1]}", score_font, RED, SCREEN_WIDTH - 420, 20)
         
         # Add player identification labels
         player_label_font = pygame.font.Font(resource_path("assets/fonts/turok.ttf"), 25)
-        draw_text("USER", player_label_font, BLUE, 20, 85)
-        draw_text("COMPUTER", player_label_font, (255, 100, 0), SCREEN_WIDTH - 220, 85)
+        draw_text("PLAYER 1", player_label_font, BLUE, 20, 95)
+        draw_text("PLAYER 2", player_label_font, (255, 100, 0), SCREEN_WIDTH - 420, 95)
         
         draw_health_bar(fighter_1.health, 20, 50)
-        draw_health_bar(fighter_2.health, SCREEN_WIDTH - 220, 50)
+        draw_health_bar(fighter_2.health, SCREEN_WIDTH - 420, 50)
 
         exit_button = draw_button("MAIN MENU", menu_font, BLACK, YELLOW, SCREEN_WIDTH // 2 - 150, 20, 300, 50)
 
@@ -355,20 +458,38 @@ def game_loop():
             fighter_1.update()
             fighter_2.update()
 
+            # Check for hits to spawn damage text
+            if fighter_1.just_hit:
+                damage_text_group.append(DamageText(fighter_1.rect.centerx, fighter_1.rect.y, 10, RED))
+                fighter_1.just_hit = False
+            if fighter_2.just_hit:
+                damage_text_group.append(DamageText(fighter_2.rect.centerx, fighter_2.rect.y, 10, RED))
+                fighter_2.just_hit = False
+
             if not fighter_1.alive:
                 score[1] += 1
                 round_over = True
                 winner_img = wizard_victory_img
+                winner_text = "PLAYER 2"
             elif not fighter_2.alive:
                 score[0] += 1
                 round_over = True
                 winner_img = warrior_victory_img
+                winner_text = "PLAYER 1"
         else:
-            victory_screen(winner_img)
-            return
+            action = victory_screen(winner_img, winner_text)
+            return action
 
         fighter_1.draw(screen)
         fighter_2.draw(screen)
+
+        # Update and draw damage text
+        remaining_texts = []
+        for text in damage_text_group:
+            if text.update():
+                text.draw()
+                remaining_texts.append(text)
+        damage_text_group[:] = remaining_texts
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -386,7 +507,12 @@ while True:
     menu_selection = main_menu()
 
     if menu_selection == "START":
-        game_loop()
+        map_selection = map_selection_screen()
+        if map_selection == "START":
+            while True:
+                result = game_loop()
+                if result != "PLAY_AGAIN":
+                    break
     elif menu_selection == "CONTROLS":
         controls_screen()
     elif menu_selection == "SCORES":
