@@ -23,6 +23,7 @@ class Fighter:
         self.attack_sound = sound
         self.hit = False
         self.just_hit = False
+        self.last_damage_taken = 0
         self.max_health = 250
         self.health = 250
         self.alive = True
@@ -52,21 +53,13 @@ class Fighter:
         if not self.ai_enabled or not self.alive:
             return 0, 0, False, 0  # dx, dy, jump, attack_type
         
-        # Reduce decision cooldown
         if self.ai_decision_cooldown > 0:
             self.ai_decision_cooldown -= 1
-            return 0, 0, False, 0
-        
+
         # Calculate distance to target
         distance = abs(target.rect.centerx - self.rect.centerx)
         vertical_distance = abs(target.rect.centery - self.rect.centery)
         
-        # Predictive aiming - anticipate player movement
-        target_velocity_x = 0
-        if hasattr(target, 'running') and target.running:
-            target_velocity_x = 10 if target.rect.centerx > self.rect.centerx else -10
-        
-        # AI behavior based on health
         is_defensive = self.health < self.ai_defense_threshold
         
         # Movement decisions
@@ -76,70 +69,47 @@ class Fighter:
         attack_type = 0
         
         # Enhanced movement logic
-        if distance > 180:  # Too far - approach aggressively
+        if distance > 150:  # Too far - approach aggressively
             if target.rect.centerx > self.rect.centerx:
-                dx = 12  # Move right faster
-            else:
-                dx = -12  # Move left faster
-            self.running = True
-        elif distance < 60:  # Too close - maintain optimal distance
-            if target.rect.centerx > self.rect.centerx:
-                dx = -8  # Move left
-            else:
                 dx = 8  # Move right
-            self.running = True
-        elif distance < 120:  # Optimal range - circle around opponent
-            if random.random() < 0.3:  # 30% chance to circle
-                if target.rect.centerx > self.rect.centerx:
-                    dx = -3
-                else:
-                    dx = 3
-                self.running = True
-        
-        # Enhanced jump decisions
-        jump_chance = 0.4 if not is_defensive else 0.6  # More likely to jump when defensive
-        if (random.random() < jump_chance and not self.jump and 
-            (distance < 200 or vertical_distance > 50 or target.jump)):
-            should_jump = True
-        
-        # Counter-attack logic - attack when opponent is vulnerable
-        should_attack = False
-        if distance < 140 and self.attack_cooldown == 0:
-            # Attack when opponent is jumping or attacking
-            if target.jump or target.attacking:
-                should_attack = True
-            # Normal attack decision
-            elif random.random() < self.ai_aggression:
-                should_attack = True
-        
-        if should_attack:
-            # Smart attack type selection
-            if target.jump:
-                attack_type = 2  # Use long range attack against jumping opponent
-            elif distance < 80:
-                attack_type = 1  # Close range attack
             else:
-                attack_type = 2  # Long range attack
-            
-            # Faster decision cooldown for more aggressive AI
-            self.ai_decision_cooldown = random.randint(5, 15)
-        
-        # Enhanced defensive behavior
-        if is_defensive:
-            # Increase distance when health is low
-            if distance < 250:
-                if target.rect.centerx > self.rect.centerx:
-                    dx = -10
-                else:
-                    dx = 10
-                self.running = True
-            # More likely to jump to escape
-            if random.random() < 0.5 and not self.jump:
+                dx = -8  # Move left
+            self.running = True
+        elif distance < 60 and is_defensive:  # Too close and defensive - back away
+            if target.rect.centerx > self.rect.centerx:
+                dx = -10
+            else:
+                dx = 10
+            self.running = True
+        elif distance > 80 and distance <= 150: # Adjust to perfect attack range
+            if target.rect.centerx > self.rect.centerx:
+                dx = 5
+            else:
+                dx = -5
+            self.running = True
+
+        # Jump logic - throttle chance to avoid bunny hopping
+        jump_chance = 0.02 if not is_defensive else 0.04
+        if random.random() < jump_chance and not self.jump:
+            if distance < 200 or target.jump or target.attacking:
                 should_jump = True
-            # Block/evade more often
-            if target.attacking and distance < 100:
-                if random.random() < 0.7:  # 70% chance to evade
-                    should_jump = True
+        
+        # Attack logic
+        if distance < 180 and self.attack_cooldown == 0 and self.ai_decision_cooldown == 0:
+            # Chance to attack
+            if random.random() < self.ai_aggression:
+                if target.jump:
+                    attack_type = 2
+                elif distance < 90:
+                    # 40% chance to use combo when close!
+                    if random.random() < 0.4:
+                        attack_type = 3
+                    else:
+                        attack_type = 1
+                else:
+                    attack_type = 2
+                
+                self.ai_decision_cooldown = random.randint(30, 60) # Wait 0.5s - 1s between attacks
         
         return dx, dy, should_jump, attack_type
 
@@ -149,7 +119,8 @@ class Fighter:
         dx = 0
         dy = 0
         self.running = False
-        self.attack_type = 0
+        if not self.attacking:
+            self.attack_type = 0
 
         # get keypresses for human player
         key = pygame.key.get_pressed()
@@ -170,13 +141,16 @@ class Fighter:
                     self.vel_y = -30
                     self.jump = True
                 # attack
-                if key[pygame.K_r] or key[pygame.K_t]:
-                    self.attack(target)
-                    # determine which attack type was used
+                if key[pygame.K_r] or key[pygame.K_t] or key[pygame.K_y]:
                     if key[pygame.K_r]:
                         self.attack_type = 1
-                    if key[pygame.K_t]:
+                        self.attack(target, 10)
+                    elif key[pygame.K_t]:
                         self.attack_type = 2
+                        self.attack(target, 10)
+                    elif key[pygame.K_y]:
+                        self.attack_type = 3
+                        self.attack(target, 15)
 
             # check player 2 controls
             elif self.player == 2:
@@ -196,7 +170,12 @@ class Fighter:
                     
                     # Apply AI attack
                     if attack_type > 0:
-                        self.attack(target)
+                        if attack_type == 1:
+                            self.attack(target, 10)
+                        elif attack_type == 2:
+                            self.attack(target, 10)
+                        elif attack_type == 3:
+                            self.attack(target, 15)
                         self.attack_type = attack_type
                 else:
                     # Player 2 human controls
@@ -211,12 +190,16 @@ class Fighter:
                         self.vel_y = -30
                         self.jump = True
                     # attack
-                    if key[pygame.K_n] or key[pygame.K_m]:
-                        self.attack(target)
-                        if key[pygame.K_n]:
+                    if key[pygame.K_b] or key[pygame.K_n] or key[pygame.K_m]:
+                        if key[pygame.K_b]:
                             self.attack_type = 1
-                        if key[pygame.K_m]:
+                            self.attack(target, 10)
+                        elif key[pygame.K_n]:
                             self.attack_type = 2
+                            self.attack(target, 10)
+                        elif key[pygame.K_m]:
+                            self.attack_type = 3
+                            self.attack(target, 15)
 
         # apply gravity
         self.vel_y += GRAVITY
@@ -247,7 +230,7 @@ class Fighter:
         self.rect.y += dy
 
     # handle animation updates
-    def update(self):
+    def update(self, target=None):
         # check what action the player is performing
         if self.health <= 0:
             self.health = 0
@@ -260,6 +243,9 @@ class Fighter:
                 self.update_action(3)  # 3:attack1
             elif self.attack_type == 2:
                 self.update_action(4)  # 4:attack2
+            elif self.attack_type == 3:
+                if self.action not in [3, 4]:
+                    self.update_action(3)  # Start with attack1
         elif self.jump:
             self.update_action(2)  # 2:jump
         elif self.running:
@@ -282,7 +268,26 @@ class Fighter:
             else:
                 self.frame_index = 0
                 # check if an attack was executed
-                if self.action == 3 or self.action == 4:
+                if self.action == 3:
+                    if self.attack_type == 3:
+                        self.action = 4
+                        self.frame_index = 0
+                        self.update_time = pygame.time.get_ticks()
+                        self.attack_sound.play()
+                        
+                        # Second hit of the combo
+                        if target:
+                            attacking_rect = pygame.Rect(self.rect.centerx - (2 * self.rect.width * self.flip), self.rect.y,
+                                                         2 * self.rect.width, self.rect.height)
+                            if attacking_rect.colliderect(target.rect):
+                                target.health -= 15
+                                target.hit = True
+                                target.just_hit = True
+                                target.last_damage_taken = 15
+                    else:
+                        self.attacking = False
+                        self.attack_cooldown = 20
+                elif self.action == 4:
                     self.attacking = False
                     self.attack_cooldown = 20
                 # check if damage was taken
@@ -292,7 +297,7 @@ class Fighter:
                     self.attacking = False
                     self.attack_cooldown = 20
 
-    def attack(self, target):
+    def attack(self, target, damage=10):
         if self.attack_cooldown == 0:
             # execute attack
             self.attacking = True
@@ -300,9 +305,10 @@ class Fighter:
             attacking_rect = pygame.Rect(self.rect.centerx - (2 * self.rect.width * self.flip), self.rect.y,
                                          2 * self.rect.width, self.rect.height)
             if attacking_rect.colliderect(target.rect):
-                target.health -= 10
+                target.health -= damage
                 target.hit = True
                 target.just_hit = True
+                target.last_damage_taken = damage
 
     def update_action(self, new_action):
         # check if the new action is different to the previous one

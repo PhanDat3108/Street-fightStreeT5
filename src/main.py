@@ -292,6 +292,79 @@ def map_selection_screen():
         clock.tick(FPS)
 
 
+def pause_screen():
+    # Draw semi-transparent overlay
+    overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 0, 0, 150))
+    screen.blit(overlay, (0, 0))
+    
+    title_text = "GAME PAUSED"
+    draw_text(title_text, menu_font_title, YELLOW, SCREEN_WIDTH // 2 - menu_font_title.size(title_text)[0] // 2, 200)
+    
+    button_width = 300
+    button_height = 60
+    
+    resume_btn = draw_button("RESUME", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - button_width // 2, 400, button_width, button_height)
+    main_menu_btn = draw_button("MAIN MENU", menu_font, BLACK, RED, SCREEN_WIDTH // 2 - button_width // 2, 500, button_width, button_height)
+    
+    pygame.display.update()
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return "RESUME"
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if resume_btn.collidepoint(event.pos):
+                    return "RESUME"
+                if main_menu_btn.collidepoint(event.pos):
+                    return "MAIN_MENU"
+        clock.tick(FPS)
+
+
+def mode_selection_screen():
+    while True:
+        draw_bg(bg_image, is_game_started=False)
+        
+        # Draw semi-transparent overlay
+        overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 150))
+        screen.blit(overlay, (0, 0))
+        
+        title_text = "SELECT GAME MODE"
+        draw_text(title_text, menu_font_title, YELLOW, SCREEN_WIDTH // 2 - menu_font_title.size(title_text)[0] // 2, 100)
+        
+        button_width = 400
+        button_height = 80
+        spacing = 50
+        
+        start_y = 300
+        
+        player_vs_bot_btn = draw_button("PLAYER VS BOT", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - button_width // 2, start_y, button_width, button_height)
+        player_vs_player_btn = draw_button("PLAYER VS PLAYER", menu_font, BLACK, GREEN, SCREEN_WIDTH // 2 - button_width // 2, start_y + button_height + spacing, button_width, button_height)
+        
+        back_btn = draw_button("BACK TO MENU", menu_font, BLACK, WHITE, SCREEN_WIDTH // 2 - 200, SCREEN_HEIGHT - 100, 400, 50)
+
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if player_vs_bot_btn.collidepoint(event.pos):
+                    return "BOT"
+                if player_vs_player_btn.collidepoint(event.pos):
+                    return "PLAYER"
+                if back_btn.collidepoint(event.pos):
+                    return "BACK"
+        
+        clock.tick(FPS)
+
+
 def scores_screen():
     while True:
         draw_bg(bg_image)
@@ -348,26 +421,28 @@ def controls_screen():
         
         # Attack controls
         draw_text("P1 ATTACKS:", controls_font, WHITE, 100, 300)
-        draw_text("R - Close Range Attack", small_font, RED, 100, 340)
-        draw_text("T - Long Range Attack", small_font, RED, 100, 370)
+        draw_text("R - Close Attack", small_font, RED, 100, 340)
+        draw_text("T - Long Attack", small_font, RED, 100, 370)
+        draw_text("Y - Combo Attack", small_font, YELLOW, 100, 400)
         
         # P2 Movement controls
-        draw_text("P2 MOVEMENT:", controls_font, WHITE, 450, 150)
-        draw_text("Left Arrow - Move Left", small_font, (255, 100, 0), 450, 190)
-        draw_text("Right Arrow - Move Right", small_font, (255, 100, 0), 450, 220)
-        draw_text("Up Arrow - Jump", small_font, (255, 100, 0), 450, 250)
+        draw_text("P2 MOVEMENT:", controls_font, WHITE, 400, 150)
+        draw_text("Left Arrow - Move Left", small_font, (255, 100, 0), 400, 190)
+        draw_text("Right Arrow - Move Right", small_font, (255, 100, 0), 400, 220)
+        draw_text("Up Arrow - Jump", small_font, (255, 100, 0), 400, 250)
         
         # P2 Attack controls
-        draw_text("P2 ATTACKS:", controls_font, WHITE, 450, 300)
-        draw_text("N - Close Range Attack", small_font, RED, 450, 340)
-        draw_text("M - Long Range Attack", small_font, RED, 450, 370)
+        draw_text("P2 ATTACKS:", controls_font, WHITE, 400, 300)
+        draw_text("B - Close Attack", small_font, RED, 400, 340)
+        draw_text("N - Long Attack", small_font, RED, 400, 370)
+        draw_text("M - Combo Attack", small_font, YELLOW, 400, 400)
         
         # Game info
-        draw_text("GAME INFO:", controls_font, WHITE, 800, 150)
-        draw_text("• P1 is WARRIOR (left)", small_font, YELLOW, 800, 190)
-        draw_text("• P2 is WIZARD (right)", small_font, (255, 100, 0), 800, 220)
-        draw_text("• Each attack deals 10 dmg", small_font, WHITE, 800, 250)
-        draw_text("• 0 health = lose", small_font, WHITE, 800, 280)
+        draw_text("GAME INFO:", controls_font, WHITE, 750, 150)
+        draw_text("• P1 is WARRIOR (left)", small_font, YELLOW, 750, 190)
+        draw_text("• P2 is WIZARD (right)", small_font, (255, 100, 0), 750, 220)
+        draw_text("• Normal attack = 10 dmg", small_font, WHITE, 750, 250)
+        draw_text("• Combo attack = 15x2 dmg", small_font, WHITE, 750, 280)
         
         # Tips
         draw_text("TIPS:", controls_font, WHITE, 800, 330)
@@ -390,10 +465,11 @@ def controls_screen():
         clock.tick(FPS)
 
 
-def reset_game():
+def reset_game(ai_enabled):
     global fighter_1, fighter_2
     fighter_1 = Fighter(1, 200, 310, False, WARRIOR_DATA, warrior_sheet, WARRIOR_ANIMATION_STEPS, sword_fx)
     fighter_2 = Fighter(2, 700, 310, True, WIZARD_DATA, wizard_sheet, WIZARD_ANIMATION_STEPS, magic_fx)
+    fighter_2.ai_enabled = ai_enabled
 
 
 MAX_HEALTH = 250
@@ -425,9 +501,9 @@ def countdown():
         pygame.time.delay(1000)
 
 
-def game_loop():
+def game_loop(ai_enabled):
     global score
-    reset_game()
+    reset_game(ai_enabled)
     round_over = False
     winner_img = None
     winner_text = ""
@@ -455,15 +531,15 @@ def game_loop():
             fighter_1.move(SCREEN_WIDTH, SCREEN_HEIGHT, fighter_2, round_over)
             fighter_2.move(SCREEN_WIDTH, SCREEN_HEIGHT, fighter_1, round_over)
 
-            fighter_1.update()
-            fighter_2.update()
+            fighter_1.update(fighter_2)
+            fighter_2.update(fighter_1)
 
             # Check for hits to spawn damage text
             if fighter_1.just_hit:
-                damage_text_group.append(DamageText(fighter_1.rect.centerx, fighter_1.rect.y, 10, RED))
+                damage_text_group.append(DamageText(fighter_1.rect.centerx, fighter_1.rect.y, fighter_1.last_damage_taken, RED))
                 fighter_1.just_hit = False
             if fighter_2.just_hit:
-                damage_text_group.append(DamageText(fighter_2.rect.centerx, fighter_2.rect.y, 10, RED))
+                damage_text_group.append(DamageText(fighter_2.rect.centerx, fighter_2.rect.y, fighter_2.last_damage_taken, RED))
                 fighter_2.just_hit = False
 
             if not fighter_1.alive:
@@ -495,9 +571,14 @@ def game_loop():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    action = pause_screen()
+                    if action == "MAIN_MENU":
+                        return None
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if exit_button.collidepoint(event.pos):
-                    return
+                    return None
 
         pygame.display.update()
         clock.tick(FPS)
@@ -507,12 +588,15 @@ while True:
     menu_selection = main_menu()
 
     if menu_selection == "START":
-        map_selection = map_selection_screen()
-        if map_selection == "START":
-            while True:
-                result = game_loop()
-                if result != "PLAY_AGAIN":
-                    break
+        mode_selection = mode_selection_screen()
+        if mode_selection in ["BOT", "PLAYER"]:
+            ai_enabled = (mode_selection == "BOT")
+            map_selection = map_selection_screen()
+            if map_selection == "START":
+                while True:
+                    result = game_loop(ai_enabled)
+                    if result != "PLAY_AGAIN":
+                        break
     elif menu_selection == "CONTROLS":
         controls_screen()
     elif menu_selection == "SCORES":
