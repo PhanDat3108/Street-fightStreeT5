@@ -39,14 +39,10 @@ canvas { display: block; }
 
 print("Street Fighter - Loading...")
 
-import asyncio, platform
+import asyncio
 
 async def custom_site():
-    import embed
-    platform.document.body.style.background = "#111"
-    div = platform.document.getElementById("loading")
-    if div:
-        div.style.display = "none"
+    print("Street Fighter ready!")
 
 asyncio.run(custom_site())
 #-->
