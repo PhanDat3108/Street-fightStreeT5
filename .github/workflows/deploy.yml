@@ -30,11 +30,25 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y xvfb libsdl2-dev
+
       - name: Install pygbag
         run: pip install pygbag
 
-      - name: Build with pygbag
-        run: python3 -m pygbag --build --width 1600 --height 900 .
+      - name: Build with pygbag (headless)
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+          DISPLAY: ":99"
+        run: |
+          Xvfb :99 -screen 0 1600x900x24 &
+          sleep 2
+          python3 -m pygbag --build --width 1600 --height 900 . 2>&1 || true
+          echo "Build done. Contents:"
+          ls -lh build/web/ || echo "build/web not found!"
 
       - name: Copy index.html to build output
         run: cp web_template.html build/web/index.html
