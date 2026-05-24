@@ -1,0 +1,80 @@
+name: Build & Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pygbag
+        run: pip install pygbag
+
+      - name: Build with pygbag
+        run: python3 -m pygbag --build --width 1280 --height 720 .
+
+      - name: Download HTML template from CDN
+        run: |
+          curl -L "https://pygame-web.github.io/cdn/0.9.3/default.tmpl" -o /tmp/default.tmpl
+
+      - name: Generate index.html
+        run: |
+          python3 << 'EOF'
+          import zipfile, os
+
+          template = open('/tmp/default.tmpl').read()
+          replacements = {
+              '{{cookiecutter.cdn}}': 'https://pygame-web.github.io/cdn/0.9.3/',
+              '{{cookiecutter.title}}': 'Street Fighter',
+              '{{cookiecutter.archive}}': 'street_fighter',
+              '{{cookiecutter.version}}': '0.9.3',
+              '{{cookiecutter.PYBUILD}}': '3.12',
+              '{{cookiecutter.width}}': '1280',
+              '{{cookiecutter.height}}': '720',
+              '{{cookiecutter.directory}}': '.',
+              '{{cookiecutter.authors}}': 'nhom5',
+              '{{cookiecutter.spdx}}': 'MIT',
+          }
+          for k, v in replacements.items():
+              template = template.replace(k, v)
+
+          with open('build/web/index.html', 'w') as f:
+              f.write(template)
+          print("index.html generated!")
+          print("Build contents:", os.listdir('build/web'))
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/web'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

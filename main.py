@@ -5,6 +5,12 @@ from pygame import font
 import asyncio
 import os
 import sys
+
+# Ensure src/ is on the path (for fighter module)
+_src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
 from fighter import Fighter
 
 # Helper Function for Bundled Assets
@@ -12,12 +18,8 @@ def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except Exception:
-        # When running from src directory, look in parent directory for assets
-        if os.path.basename(os.getcwd()) == "src":
-            base_path = os.path.abspath("..")
-        else:
-            base_path = os.path.abspath(".")
-
+        # Use the directory where this main.py file lives
+        base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
 mixer.init()
