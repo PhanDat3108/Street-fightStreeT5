@@ -1,3 +1,2 @@
 pygame
-numpy
-opencv-python
+pygbag

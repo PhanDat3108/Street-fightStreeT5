@@ -20,3 +20,20 @@ Thumbs.db
 # Ignore IDE/editor-specific files
 .idea/
 .vscode/
+
+# Ignore dev/scratch files
+scratch.py
+scratch/
+scratch_test/
+test_*.py
+check_*.py
+*_processor.py
+refactor.py
+*.html
+implementation_plan.md
+
+# Ignore test output images
+test_render.png
+tmp.png
+ryu_frames.png
+goku_*.png
