@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Street Fighter</title>
+<style>
+html, body {
+    background: #111;
+    margin: 0; padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+canvas { display: block; }
+#loading {
+    position: fixed; top: 20px; left: 50%;
+    transform: translateX(-50%);
+    color: #4eff91; font-family: sans-serif;
+    font-size: 18px; background: rgba(0,0,0,0.7);
+    padding: 10px 24px; border-radius: 8px;
+    pointer-events: none; z-index: 99;
+}
+</style>
+</head>
+<body>
+<div id="loading">&#9203; Loading Street Fighter... (first load ~30s)</div>
+<script src="https://pygame-web.github.io/cdn/0.9.3/pythons.js"
+    type="module"
+    id="site"
+    data-python="python3.12"
+    data-src="street_fighter"
+    data-os="vtx,snd,gui"
+    data-LINES=42
+    data-COLUMNS=132
+    async defer>#<!--
+
+print("Street Fighter - Loading...")
+
+import asyncio, platform
+
+async def custom_site():
+    import embed
+    platform.document.body.style.background = "#111"
+    div = platform.document.getElementById("loading")
+    if div:
+        div.style.display = "none"
+
+asyncio.run(custom_site())
+#-->
+</script>
+</body>
+</html>
