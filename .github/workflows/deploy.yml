@@ -1,4 +1,4 @@
-name: Build & Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -25,36 +25,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install system dependencies
+      - name: Prepare web folder
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y xvfb libsdl2-dev
-
-      - name: Install pygbag
-        run: pip install pygbag
-
-      - name: Build with pygbag (headless)
-        env:
-          SDL_VIDEODRIVER: dummy
-          SDL_AUDIODRIVER: dummy
-          DISPLAY: ":99"
-        run: |
-          Xvfb :99 -screen 0 1600x900x24 &
-          sleep 2
-          python3 -m pygbag --build --width 1600 --height 900 . 2>&1 || true
-          echo "Build done. Contents:"
-          ls -lh build/web/ || echo "build/web not found!"
-
-      - name: Copy index.html to build output
-        run: cp web_template.html build/web/index.html
-
-      - name: List build output
-        run: ls -lh build/web/
+          mkdir -p web_deploy
+          cp web_template.html web_deploy/index.html
+          cp web_game/street_fighter.tar.gz web_deploy/
+          cp web_game/street_fighter.apk web_deploy/
+          echo "Deploy contents:"
+          ls -lh web_deploy/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -62,7 +40,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'build/web'
+          path: 'web_deploy'
 
       - name: Deploy to GitHub Pages
         id: deployment
